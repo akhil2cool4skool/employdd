@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Employdd</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #f7f7f5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px;
+    color: #1a1a1a;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 36px;
+    margin-bottom: 6px;
+    letter-spacing: -1px;
+  }
+
+  .logo span { color: #1D9E75; }
+
+  .sub {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 40px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #eee;
+    padding: 32px;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #999;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    color: #1a1a1a;
+    line-height: 1.6;
+    background: #fafafa;
+    resize: vertical;
+    min-height: 260px;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: #1D9E75;
+    background: white;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: #1D9E75;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn:hover { background: #0F6E56; }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  .status {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    margin-top: 14px;
+    min-height: 20px;
+  }
+
+  .error {
+    font-size: 13px;
+    color: #b91c1c;
+    background: #fff5f5;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .ats-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  .tag {
+    font-size: 11px;
+    padding: 3px 10px;
+    background: #E1F5EE;
+    color: #0F6E56;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .who {
+    font-size: 12px;
+    background: #f0faf6;
+    border: 1px solid #9FE1CB;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    color: #0F6E56;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="logo">employ<span>dd</span></div>
+<div class="sub">Paste a job description. Get a tailored PDF in seconds.</div>
+
+<div class="card">
+  <div class="who">
+    Loaded for <strong>Akhil Palanivelu</strong> — SJSU Aerospace Engineering, Spartan Racing Formula SAE, NASA NCAS, composite fabrication, CFD, SolidWorks, STAR-CCM+.
+  </div>
+
+  <label class="field-label">Job description</label>
+  <textarea id="jobDesc" placeholder="Paste the full job description here — title, responsibilities, requirements, about the company. The more detail the better."></textarea>
+
+  <button class="btn" id="generateBtn" onclick="generate()">
+    Generate tailored resume PDF
+  </button>
+
+  <div class="status" id="status"></div>
+  <div class="error" id="errorBox"></div>
+  <div class="ats-tags" id="atsTags"></div>
+</div>
+
+<script>
+async function generate() {
+  const jobDesc = document.getElementById('jobDesc').value.trim();
+  const btn = document.getElementById('generateBtn');
+  const status = document.getElementById('status');
+  const errorBox = document.getElementById('errorBox');
+  const atsTags = document.getElementById('atsTags');
+
+  if (!jobDesc) { status.textContent = 'Paste a job description first.'; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Tailoring your resume...';
+  status.textContent = 'Reading the job description...';
+  errorBox.style.display = 'none';
+  atsTags.innerHTML = '';
+
+  try {
+    const res = await fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_description: jobDesc })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Something went wrong');
+    }
+
+    // Parse ATS keywords from response header if present
+    const keywords = res.headers.get('X-ATS-Keywords');
+    if (keywords) {
+      JSON.parse(keywords).forEach(kw => {
+        const t = document.createElement('span');
+        t.className = 'tag';
+        t.textContent = kw;
+        atsTags.appendChild(t);
+      });
+    }
+
+    // Trigger download
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    a.download = match ? match[1] : 'Akhil_Palanivelu_Resume.pdf';
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    status.textContent = 'Done — resume downloaded.';
+
+  } catch(e) {
+    errorBox.style.display = 'block';
+    errorBox.textContent = 'Error: ' + e.message;
+    status.textContent = '';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Generate another';
+}
+</script>
+</body>
+</html>
