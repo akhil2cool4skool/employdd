@@ -1,2 +1,8 @@
 [phases.setup]
-nixPkgs = ["chromium", "glib", "nss", "nspr", "atk", "cups", "dbus", "libdrm", "xorg.libX11", "xorg.libxcb", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "mesa", "libxkbcommon", "pango", "cairo", "alsa-lib", "at-spi2-atk", "at-spi2-core"]
+nixPkgs = ["python312", "chromium", "glib", "nss", "nspr", "atk", "cups", "dbus", "libdrm", "xorg.libX11", "xorg.libxcb", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "mesa", "libxkbcommon", "pango", "cairo", "alsa-lib", "at-spi2-atk", "at-spi2-core"]
+
+[phases.install]
+cmds = ["python3 -m venv --copies /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"]
+
+[start]
+cmd = "playwright install chromium && gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120"
