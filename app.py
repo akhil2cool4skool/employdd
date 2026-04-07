@@ -9,7 +9,7 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 BACKGROUND = """
 NAME: Akhil Palanivelu
 EMAIL: akhilisamazing@gmail.com
-PHONE: 510) 737-2091
+PHONE: 510 737-2091
 LINKEDIN: linkedin.com/in/akhil-palanivelu-6b7421311
 
 EDUCATION:
@@ -134,7 +134,7 @@ def generate():
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5.4-mini",
             temperature=0.3,
             max_tokens=4000,
             messages=[
