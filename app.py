@@ -1,10 +1,11 @@
-import os, json, re, tempfile
+import os
+import json
+import re
 from flask import Flask, request, jsonify, send_file, render_template
 from openai import OpenAI
-#from pdf_generator import generate_resume_pdf
+from pdfgenerator import generate_resume_pdf
 
 app = Flask(__name__)
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 BACKGROUND = """
 NAME: Akhil Palanivelu
@@ -95,7 +96,7 @@ Return ONLY valid JSON, no backticks, no explanation:
     {
       "school": "San Jose State University",
       "location": "San Jose, CA",
-      "date": "Aug 2025 \u2013 May 2027",
+      "date": "Aug 2025 – May 2027",
       "degrees": ["B.S. Aerospace Engineering (in progress) | GPA: 3.5"],
       "courses": ["only","relevant","courses"]
     }
@@ -108,7 +109,7 @@ Return ONLY valid JSON, no backticks, no explanation:
           "org": "Org name",
           "role": "Role title",
           "location": "City, ST",
-          "date": "Mon Year \u2013 Mon Year",
+          "date": "Mon Year – Mon Year",
           "bullets": ["bullet","bullet","bullet"]
         }
       ]
@@ -121,50 +122,71 @@ Return ONLY valid JSON, no backticks, no explanation:
   ]
 }"""
 
-@app.route("/")
+
+def get_openai_client():
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set")
+    return OpenAI(api_key=api_key)
+
+
+@app.get("/")
 def index():
     return render_template("index.html")
 
-@app.route("/generate", methods=["POST"])
+
+@app.get("/health")
+def health():
+    return "ok", 200
+
+
+@app.post("/generate")
 def generate():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     job_description = data.get("job_description", "").strip()
+
     if not job_description:
         return jsonify({"error": "No job description provided"}), 400
 
     try:
+        client = get_openai_client()
         response = client.chat.completions.create(
             model="gpt-5.4-mini",
             temperature=0.3,
             max_tokens=4000,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"Candidate background:\n{BACKGROUND}\n\nJob description:\n{job_description}"}
+                {
+                    "role": "user",
+                    "content": f"Candidate background:\n{BACKGROUND}\n\nJob description:\n{job_description}"
+                }
             ]
         )
-        raw = response.choices[0].message.content
+        raw = response.choices[0].message.content or ""
         raw = re.sub(r"```json|```", "", raw).strip()
         resume_data = json.loads(raw)
     except json.JSONDecodeError as e:
         return jsonify({"error": f"AI returned invalid JSON: {str(e)}"}), 500
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"OpenAI request failed: {str(e)}"}), 500
 
     try:
-        #pdf_path = generate_resume_pdf(resume_data)
-        return jsonify(resume_data)
+        pdf_path = generate_resume_pdf(resume_data)
+        job_title = resume_data.get("job_title", "Resume").replace(" ", "_")[:30]
+        filename = f"Akhil_Palanivelu_{job_title}.pdf"
+
+        return send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype="application/pdf"
+        )
     except Exception as e:
-        return jsonify({"error": f"PDF generation failed: {str(e)}"}), 500
+        return jsonify({
+            "error": f"PDF generation failed: {str(e)}",
+            "resume_data": resume_data
+        }), 500
 
-    job_title = resume_data.get("job_title", "Resume").replace(" ", "_")[:30]
-    filename = f"Akhil_Palanivelu_{job_title}.pdf"
-
-    return send_file(
-        pdf_path,
-        as_attachment=True,
-        download_name=filename,
-        mimetype="application/pdf"
-    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
