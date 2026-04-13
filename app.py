@@ -1,7 +1,7 @@
 import os, json, re, tempfile
 from flask import Flask, request, jsonify, send_file, render_template
 from openai import OpenAI
-from pdf_generator import generate_resume_pdf
+#from pdf_generator import generate_resume_pdf
 
 app = Flask(__name__)
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -151,7 +151,8 @@ def generate():
         return jsonify({"error": str(e)}), 500
 
     try:
-        pdf_path = generate_resume_pdf(resume_data)
+        #pdf_path = generate_resume_pdf(resume_data)
+        return jsonify(resume_data)
     except Exception as e:
         return jsonify({"error": f"PDF generation failed: {str(e)}"}), 500
 
